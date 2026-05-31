@@ -1,0 +1,536 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String          @id @default(cuid())
+  email                 String          @unique
+  name                  String?
+  image                 String?
+  password              String?
+  emailVerified         DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  role                  UserRole        @default(USER)
+  isActive              Boolean         @default(true)
+  
+  accounts              Account[]
+  sessions              Session[]
+  favorites             Favorite[]
+  watchHistory          WatchHistory[]
+  comments              Comment[]
+  ratings               Rating[]
+  subscriptions         Subscription[]
+  payments              Payment[]
+  adminLogs             AdminLog[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String  @index
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String   @index
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  type       String   @default("email")
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
+
+model Movie {
+  id              String          @id @default(cuid())
+  title           String          @db.VarChar(255)
+  slug            String          @unique @db.VarChar(255)
+  description     String          @db.Text
+  longDescription String?         @db.Text
+  releaseDate     DateTime
+  duration        Int
+  rating          Float           @default(0)
+  posterUrl       String          @db.Text
+  backgroundUrl   String          @db.Text
+  trailerUrl      String?         @db.Text
+  videoUrl        String          @db.Text
+  director        String?
+  writers         String?
+  language        String          @default("en")
+  status          ContentStatus   @default(PUBLISHED)
+  viewCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  categoryId      String          @index
+  category        Category        @relation(fields: [categoryId], references: [id])
+  
+  genres          Genre[]         @relation("MovieGenres")
+  actors          Actor[]         @relation("MovieActors")
+  favorites       Favorite[]      @relation("MovieFavorites")
+  watchHistory    WatchHistory[]  @relation("MovieWatchHistory")
+  comments        Comment[]       @relation("MovieComments")
+  ratings         Rating[]        @relation("MovieRatings")
+  
+  @@index([categoryId])
+  @@index([slug])
+  @@index([status])
+}
+
+model Series {
+  id              String          @id @default(cuid())
+  title           String          @db.VarChar(255)
+  slug            String          @unique @db.VarChar(255)
+  description     String          @db.Text
+  longDescription String?         @db.Text
+  releaseDate     DateTime
+  totalSeasons    Int
+  totalEpisodes   Int
+  rating          Float           @default(0)
+  posterUrl       String          @db.Text
+  backgroundUrl   String          @db.Text
+  trailerUrl      String?         @db.Text
+  director        String?
+  writers         String?
+  language        String          @default("en")
+  status          ContentStatus   @default(PUBLISHED)
+  viewCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  categoryId      String          @index
+  category        Category        @relation(fields: [categoryId], references: [id])
+  
+  seasons         Season[]
+  genres          Genre[]         @relation("SeriesGenres")
+  actors          Actor[]         @relation("SeriesActors")
+  favorites       Favorite[]      @relation("SeriesFavorites")
+  watchHistory    WatchHistory[]  @relation("SeriesWatchHistory")
+  comments        Comment[]       @relation("SeriesComments")
+  ratings         Rating[]        @relation("SeriesRatings")
+  
+  @@index([categoryId])
+  @@index([slug])
+  @@index([status])
+}
+
+model Season {
+  id          String      @id @default(cuid())
+  seasonNo    Int
+  title       String      @db.VarChar(255)
+  description String?     @db.Text
+  posterUrl   String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  seriesId    String      @index
+  series      Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  episodes    Episode[]
+  
+  @@unique([seriesId, seasonNo])
+}
+
+model Episode {
+  id          String      @id @default(cuid())
+  episodeNo   Int
+  title       String      @db.VarChar(255)
+  description String?     @db.Text
+  duration    Int
+  posterUrl   String?     @db.Text
+  videoUrl    String      @db.Text
+  trailerUrl  String?     @db.Text
+  rating      Float       @default(0)
+  viewCount   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  seasonId    String      @index
+  season      Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  
+  comments    Comment[]   @relation("EpisodeComments")
+  ratings     Rating[]    @relation("EpisodeRatings")
+  
+  @@unique([seasonId, episodeNo])
+}
+
+model Animation {
+  id              String          @id @default(cuid())
+  title           String          @db.VarChar(255)
+  slug            String          @unique @db.VarChar(255)
+  description     String          @db.Text
+  releaseDate     DateTime
+  duration        Int
+  rating          Float           @default(0)
+  posterUrl       String          @db.Text
+  backgroundUrl   String          @db.Text
+  trailerUrl      String?         @db.Text
+  videoUrl        String          @db.Text
+  director        String?
+  language        String          @default("en")
+  status          ContentStatus   @default(PUBLISHED)
+  viewCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  genres          Genre[]         @relation("AnimationGenres")
+  actors          Actor[]         @relation("AnimationActors")
+  comments        Comment[]       @relation("AnimationComments")
+  ratings         Rating[]        @relation("AnimationRatings")
+  
+  @@index([slug])
+  @@index([status])
+}
+
+model Cartoon {
+  id              String          @id @default(cuid())
+  title           String          @db.VarChar(255)
+  slug            String          @unique @db.VarChar(255)
+  description     String          @db.Text
+  releaseDate     DateTime
+  duration        Int
+  rating          Float           @default(0)
+  posterUrl       String          @db.Text
+  backgroundUrl   String          @db.Text
+  trailerUrl      String?         @db.Text
+  videoUrl        String          @db.Text
+  director        String?
+  language        String          @default("en")
+  status          ContentStatus   @default(PUBLISHED)
+  viewCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  genres          Genre[]         @relation("CartoonGenres")
+  actors          Actor[]         @relation("CartoonActors")
+  comments        Comment[]       @relation("CartoonComments")
+  ratings         Rating[]        @relation("CartoonRatings")
+  
+  @@index([slug])
+  @@index([status])
+}
+
+model Category {
+  id              String          @id @default(cuid())
+  name            String          @unique @db.VarChar(100)
+  slug            String          @unique @db.VarChar(100)
+  description     String?         @db.Text
+  iconUrl         String?         @db.Text
+  color           String          @default("#6366f1")
+  isActive        Boolean         @default(true)
+  displayOrder    Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  movies          Movie[]
+  series          Series[]
+  
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Genre {
+  id              String          @id @default(cuid())
+  name            String          @unique @db.VarChar(100)
+  slug            String          @unique @db.VarChar(100)
+  description     String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  movies          Movie[]         @relation("MovieGenres")
+  series          Series[]        @relation("SeriesGenres")
+  animations      Animation[]     @relation("AnimationGenres")
+  cartoons        Cartoon[]       @relation("CartoonGenres")
+  
+  @@index([slug])
+}
+
+model Actor {
+  id              String          @id @default(cuid())
+  name            String          @db.VarChar(255)
+  slug            String          @unique @db.VarChar(255)
+  bio             String?         @db.Text
+  imageUrl        String?         @db.Text
+  birthDate       DateTime?
+  birthPlace      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  movies          Movie[]         @relation("MovieActors")
+  series          Series[]        @relation("SeriesActors")
+  animations      Animation[]     @relation("AnimationActors")
+  cartoons        Cartoon[]       @relation("CartoonActors")
+  
+  @@index([slug])
+}
+
+model Favorite {
+  id              String          @id @default(cuid())
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  movieId         String?         @index
+  movie           Movie?          @relation("MovieFavorites", fields: [movieId], references: [id], onDelete: Cascade)
+  
+  seriesId        String?         @index
+  series          Series?         @relation("SeriesFavorites", fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime        @default(now())
+  
+  @@unique([userId, movieId])
+  @@unique([userId, seriesId])
+}
+
+model WatchHistory {
+  id              String          @id @default(cuid())
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  movieId         String?         @index
+  movie           Movie?          @relation("MovieWatchHistory", fields: [movieId], references: [id], onDelete: Cascade)
+  
+  seriesId        String?         @index
+  series          Series?         @relation("SeriesWatchHistory", fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  episodeId       String?         @index
+  episode         Episode?        @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  
+  watchedAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([userId, movieId])
+  @@unique([userId, seriesId])
+  @@index([userId, watchedAt])
+}
+
+model Comment {
+  id              String          @id @default(cuid())
+  content         String          @db.Text
+  isApproved      Boolean         @default(false)
+  isSpam          Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  movieId         String?         @index
+  movie           Movie?          @relation("MovieComments", fields: [movieId], references: [id], onDelete: Cascade)
+  
+  seriesId        String?         @index
+  series          Series?         @relation("SeriesComments", fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  episodeId       String?         @index
+  episode         Episode?        @relation("EpisodeComments", fields: [episodeId], references: [id], onDelete: Cascade)
+  
+  animationId     String?         @index
+  animation       Animation?      @relation("AnimationComments", fields: [animationId], references: [id], onDelete: Cascade)
+  
+  cartoonId       String?         @index
+  cartoon         Cartoon?        @relation("CartoonComments", fields: [cartoonId], references: [id], onDelete: Cascade)
+  
+  parentId        String?         @index
+  parent          Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies         Comment[]       @relation("CommentReplies")
+  
+  @@index([userId, createdAt])
+}
+
+model Rating {
+  id              String          @id @default(cuid())
+  score           Float           @db.DoublePrecision
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  movieId         String?         @index
+  movie           Movie?          @relation("MovieRatings", fields: [movieId], references: [id], onDelete: Cascade)
+  
+  seriesId        String?         @index
+  series          Series?         @relation("SeriesRatings", fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  episodeId       String?         @index
+  episode         Episode?        @relation("EpisodeRatings", fields: [episodeId], references: [id], onDelete: Cascade)
+  
+  animationId     String?         @index
+  animation       Animation?      @relation("AnimationRatings", fields: [animationId], references: [id], onDelete: Cascade)
+  
+  cartoonId       String?         @index
+  cartoon         Cartoon?        @relation("CartoonRatings", fields: [cartoonId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, movieId])
+  @@unique([userId, seriesId])
+  @@unique([userId, episodeId])
+  @@unique([userId, animationId])
+  @@unique([userId, cartoonId])
+  @@index([userId])
+}
+
+model Subscription {
+  id              String          @id @default(cuid())
+  stripeId        String?         @unique @db.VarChar(255)
+  paypalId        String?         @unique @db.VarChar(255)
+  plan            SubscriptionPlan
+  status          SubscriptionStatus @default(PENDING)
+  currentPeriodStart DateTime?
+  currentPeriodEnd DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  userId          String          @unique @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  payments        Payment[]
+  
+  @@index([status])
+  @@index([plan])
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  amount          Float           @db.DoublePrecision
+  currency        String          @default("USD")
+  status          PaymentStatus   @default(PENDING)
+  paymentMethod   PaymentMethod
+  transactionId   String?         @unique @db.VarChar(255)
+  orderId         String?         @unique @db.VarChar(255)
+  metadata        String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  subscriptionId  String?         @index
+  subscription    Subscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  
+  @@index([status])
+  @@index([userId, createdAt])
+}
+
+model Advertisement {
+  id              String          @id @default(cuid())
+  title           String          @db.VarChar(255)
+  type            AdType
+  position        AdPosition
+  imageUrl        String?         @db.Text
+  redirectUrl     String?         @db.Text
+  isActive        Boolean         @default(true)
+  startDate       DateTime        @default(now())
+  endDate         DateTime?
+  priority        Int             @default(0)
+  impressions     Int             @default(0)
+  clicks          Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([type])
+  @@index([position])
+  @@index([isActive])
+}
+
+model AdminLog {
+  id              String          @id @default(cuid())
+  action          String          @db.VarChar(255)
+  description     String?         @db.Text
+  target          String?         @db.VarChar(255)
+  targetId        String?         @db.VarChar(255)
+  metadata        String?         @db.Text
+  ipAddress       String?         @db.VarChar(50)
+  userAgent       String?         @db.Text
+  createdAt       DateTime        @default(now())
+  
+  userId          String          @index
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([action])
+  @@index([userId, createdAt])
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  ULTIMATE
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  PAYPAL
+  CREDIT_CARD
+}
+
+enum AdType {
+  BANNER
+  SIDEBAR
+  INLINE
+  FOOTER
+}
+
+enum AdPosition {
+  HEADER
+  SIDEBAR
+  FOOTER
+  IN_CONTENT
+}
